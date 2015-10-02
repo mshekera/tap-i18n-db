@@ -45,30 +45,25 @@ TAPi18n.publish = (name, handler, options) ->
 
 TAPi18n.publishComposite = (name, options) ->
   if name is null
-    throw new Meteor.Error 500, 'TAPi18n.publish doesn\'t support null publications'
+    throw new Meteor.Error 500, 'TAPi18n.publishComposite doesn\'t support null publications'
 
-  if _.isFunction options
-    i18n_handler = () ->
-      args = Array.prototype.slice.call arguments
-      # last subscription argument is always the language tag
-      language_tag = _.last args
-      @language = language_tag
-      # Set handler context in current fiber's
-      Fiber.current.language_tag = language_tag
-      # Call the user handler without the language_tag argument
-      cursors = options.apply this, args.slice 0, -1
-      # Clear handler context
-      # delete Fiber.current.language_tag
+  i18n_handler = () ->
+    args = Array.prototype.slice.call(arguments)
 
-      if cursors?
-        return cursors
-  else
-    i18n_handler = () ->
-      langauge_tag = Array.prototype.slice.call(arguments)[0]
+    # last subscription argument is always the language tag
+    language_tag = _.last(args)
+    @language = language_tag
+    # Set handler context in current fiber's
+    Fiber.current.language_tag = language_tag
+    # Call the user handler without the language_tag argument
+    if _.isFunction options
+      handler = options.apply this, args.slice 0, -1
+    else
+      handler = options
+    # Clear handler context
+    delete Fiber.current.language_tag
 
-      Fiber.current.language_tag = language_tag
-
-      return options
+    return handler
 
   # set the actual publish method
   return Meteor.publishComposite name, i18n_handler
